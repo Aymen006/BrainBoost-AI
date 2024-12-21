@@ -1,29 +1,96 @@
 'use client'
 
-import React from 'react'
-import { useState, useEffect, useRef } from 'react'
-import { useChat } from 'ai/react'
-import { motion } from 'framer-motion'
-import { Bot, Send, Loader2, Sparkles, MessageSquare } from 'lucide-react'
-import { Space_Grotesk } from 'next/font/google'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { useChat } from './hooks/useChat'
 import { ChatSidebar } from './components/chat-sidebar'
 import { TopNav } from './components/top-nav'
+import { Bot, Send, Loader2, Sparkles, MessageSquare } from 'lucide-react'
+import { Space_Grotesk } from 'next/font/google'
+import { GoogleGenerativeAI } from '@google/generative-ai'
+import { motion } from 'framer-motion'
 
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'] })
 
 export default function Home() {
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat()
+  const [activeChatId, setActiveChatId] = useState<string>()
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+  const [chats, setChats] = useState<Array<{ id: string; title: string; date: Date }>>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
 
-  const handleNewChat = () => {
-    // Handle new chat creation here
-    console.log('Creating new chat...')
+  const { messages, input, handleInputChange, handleSubmit, isLoading, resetChat } = useChat(activeChatId)
+
+  const handleNewChat = (title: string) => {
+    const newChat = {
+      id: Date.now().toString(),
+      title,
+      date: new Date()
+    }
+    setChats(prevChats => [newChat, ...prevChats])
+    setActiveChatId(newChat.id)
+    setIsSidebarOpen(false)
   }
 
+  const handleSelectChat = (chatId: string) => {
+    if (resetChat) {
+      resetChat()
+    }
+    setActiveChatId(chatId)
+    setIsSidebarOpen(false)
+  }
+
+  const handleDeleteChat = useCallback((chatId: string) => {
+    setChats(prevChats => prevChats.filter(chat => chat.id !== chatId))
+    if (activeChatId === chatId) {
+      setActiveChatId(undefined)
+      resetChat?.()
+    }
+    // Clean up chat messages from storage
+    const storedChats = localStorage.getItem('chatMessages')
+    if (storedChats) {
+      const chats = JSON.parse(storedChats)
+      delete chats[chatId]
+      localStorage.setItem('chatMessages', JSON.stringify(chats))
+    }
+  }, [activeChatId, resetChat])
+
+  // Load chats from localStorage on mount
+  useEffect(() => {
+    const savedChats = localStorage.getItem('chats')
+    if (savedChats) {
+      try {
+        const parsedChats = JSON.parse(savedChats).map((chat: any) => ({
+          ...chat,
+          date: new Date(chat.date)
+        }))
+        setChats(parsedChats)
+        // If there are chats and no active chat, set the most recent one as active
+        if (parsedChats.length > 0 && !activeChatId) {
+          setActiveChatId(parsedChats[0].id)
+        }
+      } catch (error) {
+        console.error('Error loading chats:', error)
+        localStorage.removeItem('chats')
+      }
+    }
+    setIsMounted(true)
+  }, [])
+
+  // Save chats to localStorage whenever they change
+  useEffect(() => {
+    if (chats.length > 0) {
+      localStorage.setItem('chats', JSON.stringify(chats))
+    }
+  }, [chats])
+
+  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  if (!isMounted) {
+    return null
+  }
 
   return (
     <div className={`min-h-screen bg-black text-white ${spaceGrotesk.className}`}>
@@ -42,6 +109,10 @@ export default function Home() {
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         onNewChat={handleNewChat}
+        onSelectChat={handleSelectChat}
+        onDeleteChat={handleDeleteChat}
+        activeChat={activeChatId}
+        chats={chats}
       />
 
       {/* Main Content */}
@@ -86,7 +157,7 @@ export default function Home() {
             >
               {messages.map((message, index) => (
                 <motion.div
-                  key={message.id}
+                  key={index}
                   initial={{ opacity: 0, x: message.role === 'user' ? 20 : -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
@@ -146,3 +217,38 @@ export default function Home() {
   )
 }
 
+export async function POST(req: Request) {
+  try {
+    const { messages } = await req.json()
+    
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_STUDIO_KEY || '')
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
+
+    const googleMessages = messages.map((message: { role: string; content: string }) => ({
+      role: message.role,
+      parts: [{ text: message.content }],
+    }))
+
+    const chat = model.startChat({
+      history: googleMessages.slice(0, -1),
+      generationConfig: {
+        maxOutputTokens: 2048,
+        temperature: 0.9,
+      },
+    })
+
+    const result = await chat.sendMessage(googleMessages[googleMessages.length - 1].parts[0].text)
+    const response = await result.response
+    const text = await response.text()
+    console.log('API sending response:', text)
+
+    return new Response(text, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+      },
+    })
+  } catch (error) {
+    console.error('Chat API Error:', error)
+    return new Response('Error processing chat request', { status: 500 })
+  }
+}

@@ -1,10 +1,11 @@
 'use client'
 
-import { Menu, Plus } from 'lucide-react'
+import { Menu } from 'lucide-react'
+import { NewChatButton } from './new-chat-button'
 
 interface TopNavProps {
   onToggleSidebar: () => void
-  onNewChat: () => void
+  onNewChat: (title: string) => void
   isSidebarOpen: boolean
 }
 
@@ -19,16 +20,9 @@ export function TopNav({ onToggleSidebar, onNewChat, isSidebarOpen }: TopNavProp
           <Menu className="w-5 h-5" />
         </button>
         {!isSidebarOpen && (
-          <button
-            onClick={onNewChat}
-            className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-[#F3904F] to-[#3B4371] rounded-lg hover:opacity-90 transition-opacity text-sm"
-          >
-            <Plus className="w-4 h-4" />
-            New Chat
-          </button>
+          <NewChatButton onNewChat={onNewChat} />
         )}
       </div>
     </div>
   )
 }
-
