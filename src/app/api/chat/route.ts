@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     await connectDB()
     
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_STUDIO_KEY || '')
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp', systemInstruction: "Your aim is to help the user to create a todo list" })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp', systemInstruction: "Your primary goal is to assist the user in brainstorming, organizing, and planning their ideas effectively. Provide creative suggestions, structured frameworks, and actionable steps to help the user develop, refine, and execute their ideas. Offer guidance, ask clarifying questions, and adapt to the user's needs to ensure their vision is clear and achievable" })
 
 
     await saveChatMessage('user1', messages[messages.length - 1].content, 'user')
