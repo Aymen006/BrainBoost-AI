@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from 'react'
 
 interface Message {
-  role: 'user' | 'assistant'
+  role: 'user' | 'model'
   content: string
 }
 
@@ -107,7 +107,7 @@ export function useChat(chatId?: string) {
 
       const text = await response.text()
       const assistantMessage: Message = {
-        role: 'assistant',
+        role: 'model',
         content: text
       }
 

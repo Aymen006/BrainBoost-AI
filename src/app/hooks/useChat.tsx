@@ -111,7 +111,7 @@ export function useChat(chatId?: string) {
 
     try {
       setMessages(prev => [...prev, newMessage]);
-      
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -128,7 +128,7 @@ export function useChat(chatId?: string) {
       const text = await response.text();
       const aiMessage: ChatMessage = {
         id: Date.now().toString(),
-        role: 'assistant',
+        role: 'model',
         content: text,
         timestamp: Date.now(),
       };
@@ -149,8 +149,28 @@ export function useChat(chatId?: string) {
     }
   };
 
+  const getAllChatMessages = async () => {
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'GET',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to get messages');
+      }
+      const messages = await response.json();
+      return messages;
+    } catch (error) {
+      if (error instanceof Error) {
+        handleError(error);
+      }
+    }
+  };
+
   // Cleanup on unmount
   useEffect(() => {
+    getAllChatMessages().then(messages => {
+      setMessages(messages);
+    })
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();

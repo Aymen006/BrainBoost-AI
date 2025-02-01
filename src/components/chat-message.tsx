@@ -7,7 +7,7 @@ interface MessageProps {
 }
 
 export const ChatMessageComponent = memo(({ message }: MessageProps) => {
-  const isBot = message.role === 'assistant';
+  const isBot = message.role === 'model';
   
   return (
     <div
@@ -15,7 +15,7 @@ export const ChatMessageComponent = memo(({ message }: MessageProps) => {
         isBot ? 'bg-secondary' : 'bg-background'
       }`}
       role="listitem"
-      aria-label={`${isBot ? 'Assistant' : 'User'} message`}
+      aria-label={`${isBot ? 'Model' : 'User'} message`}
     >
       {isBot && (
         <div className="flex-shrink-0">
@@ -24,7 +24,7 @@ export const ChatMessageComponent = memo(({ message }: MessageProps) => {
       )}
       <div className="flex-1 space-y-2">
         <p className="text-sm font-medium">
-          {isBot ? 'Assistant' : 'You'}
+          {isBot ? 'Model' : 'You'}
         </p>
         <div 
           className="prose prose-sm max-w-none"

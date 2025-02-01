@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Send } from 'lucide-react'
 
 interface Message {
-  role: 'user' | 'assistant'
+  role: 'user' | 'model'
   content: string
 }
 
@@ -38,7 +38,7 @@ export function ChatInterface() {
       const text = await response.text()
       console.log('API Response:', text)
       
-      const assistantMessage: Message = { role: 'assistant', content: text }
+      const assistantMessage: Message = { role: 'model', content: text }
       console.log('Current messages:', messages)
       console.log('Adding assistant message:', assistantMessage)
       
@@ -50,7 +50,7 @@ export function ChatInterface() {
       })
     } catch (error) {
       console.error('Error:', error)
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }])
+      setMessages(prev => [...prev, { role: 'model', content: 'Sorry, I encountered an error. Please try again.' }])
     } finally {
       setIsLoading(false)
     }
